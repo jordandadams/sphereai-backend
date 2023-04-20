@@ -4,24 +4,20 @@ import dotenv from "dotenv";
 
 dotenv.config();
 
-// Import the OPENAI_API_KEY from the environment variables
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 
-// Create the OpenAI Configuration
 const configuration = new Configuration({
     apiKey: OPENAI_API_KEY,
 });
 
-// Instantiate the OpenAI client with the Configuration
 const openai = new OpenAIApi(configuration);
 
 // Define a mapping of services and service items to AI prompts
 const servicePrompts = {
     writing: {
         'writeanarticle': 'Write an article like a grad-level professor. If understood, just reply "Hello! What article may I write for you today?"',
-        // Add more service items here if needed
+        // TODO: Add more service items
     },
-    // Add more services here if needed
 };
 
 async function getAllSessionsForUser(userEmail) {
@@ -46,11 +42,10 @@ async function createAISession(service, serviceItem, userEmail) {
         throw new Error('Invalid service or service item');
     }
 
-    // Generate a unique session ID (for demonstration purposes; use a more robust method for production)
+    // Generate a unique session ID
     const sessionId = Math.random().toString(36).substring(2);
 
     try {
-        // Get the AI's initial response
         const gptResponse = await openai.createCompletion({
             model: 'text-davinci-003',
             prompt: prompt,
@@ -67,7 +62,6 @@ async function createAISession(service, serviceItem, userEmail) {
         });
         await chatSession.save();
 
-        // Return the session ID and the initial AI response
         return { sessionId, message: aiResponse };
     } catch (error) {
         if (error.response) {
@@ -76,18 +70,16 @@ async function createAISession(service, serviceItem, userEmail) {
         } else {
             console.log(error.message);
         }
-        throw error; // Propagate the error to the caller
+        throw error;
     }
 }
 
 async function chatWithAI(sessionId, userPrompt) {
-    // Retrieve the chat session from the database
     const chatSession = await ChatSession.findOne({ sessionId });
     if (!chatSession) {
         throw new Error('Session not found');
     }
 
-    // Combine the AI context with the user's prompt
     const context = chatSession.chatLogs.map(log => `${log.sender}: ${log.message}`).join('\n');
     const combinedPrompt = `${context}\nuser: ${userPrompt}`;
 

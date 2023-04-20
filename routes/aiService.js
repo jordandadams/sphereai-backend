@@ -9,7 +9,6 @@ const router = express.Router();
 // Route to get all chat sessions for a specific user based on userEmail
 router.get('/get-sessions', authMiddleware, async (req, res) => {
     try {
-        // Extract userEmail from the query parameters
         const { userEmail } = req.query;
         if (!userEmail) {
             throw new Error('User email is required');
@@ -36,7 +35,6 @@ router.get('/get-session/:sessionId', authMiddleware, async (req, res) => {
 router.post('/create-session/:service/:serviceItem', authMiddleware, async (req, res) => {
     try {
         const { service, serviceItem } = req.params;
-        // Extract userEmail from the JSON body
         const { userEmail } = req.body;
         if (!userEmail) {
             throw new Error('User email is required');
