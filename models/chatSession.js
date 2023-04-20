@@ -8,6 +8,7 @@ const chatLogSchema = new mongoose.Schema({
 });
 
 const chatSessionSchema = new mongoose.Schema({
+    userEmail: { type: String, required: true },
     service: { type: String, required: true },
     serviceItem: { type: String, required: true },
     sessionId: { type: String, required: true },

@@ -24,6 +24,21 @@ const servicePrompts = {
     // Add more services here if needed
 };
 
+async function getAllSessionsForUser(userEmail) {
+    // Query the database for chat sessions with the specified userEmail
+    const sessions = await ChatSession.find({ userEmail });
+    return sessions;
+}
+
+async function getChatSessionBySessionId(sessionId) {
+    // Retrieve the chat session from the database
+    const chatSession = await ChatSession.findOne({ sessionId });
+    if (!chatSession) {
+        throw new Error('Session not found');
+    }
+    return chatSession;
+}
+
 async function createAISession(service, serviceItem, userEmail) {
     // Get the appropriate AI prompt based on the selected service and service item
     const prompt = servicePrompts[service]?.[serviceItem];
@@ -101,8 +116,8 @@ async function chatWithAI(sessionId, userPrompt) {
         } else {
             console.log(error.message);
         }
-        throw error; // Propagate the error to the caller
+        throw error;
     }
 }
 
-export { createAISession, chatWithAI };
+export { createAISession, chatWithAI, getAllSessionsForUser, getChatSessionBySessionId };
