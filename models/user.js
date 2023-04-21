@@ -36,7 +36,11 @@ const userSchema = new mongoose.Schema({
             },
             message: 'Date of birth must be in the format MM/DD/YYYY'
         }
-    }
+    },
+    isVerified: { type: Boolean, default: false },
+    twoFAToken: { type: String, default: null },
+    twoFATokenExpires: { type: Date, default: null },
+    twoFATokenSentAt: { type: Date, default: null }
 });
 
 // Hash the password before saving it to the database

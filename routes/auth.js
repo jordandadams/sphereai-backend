@@ -14,6 +14,16 @@ router.post('/register', async (req, res) => {
     }
 });
 
+router.post('/verify', async (req, res) => {
+    try {
+        const { email, twoFAToken } = req.body;
+        const result = await authService.verifyUser(email, twoFAToken);
+        res.status(200).send(result);
+    } catch (error) {
+        res.status(400).send({ error: error.message });
+    }
+});
+
 router.post('/login', async (req, res) => {
     try {
         const { email, password } = req.body;
