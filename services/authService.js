@@ -13,6 +13,33 @@ const SENDGRID_API_KEY = process.env.SENDGRID_API_KEY;
 sgMail.setApiKey(SENDGRID_API_KEY);
 
 const registerUser = async (userData) => {
+    const { email, password } = userData;
+
+    // Collect error objects in an array
+    const errors = [];
+
+    // Validate email format
+    if (!email || !/^[\w-]+(\.[\w-]+)*@([\w-]+\.)+[a-zA-Z]{2,7}$/.test(email)) {
+        errors.push({ field: 'email', message: 'Invalid email format' });
+    }
+
+    // Check if email already exists
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+        errors.push({ field: 'email', message: 'Email already in use' });
+    }
+
+    // Validate password length
+    if (!password || password.length < 8) {
+        errors.push({ field: 'password', message: 'Password must be at least 8 characters long' });
+    }
+    
+    // Check if there are validation errors
+    if (errors.length > 0) {
+        // Return the errors array
+        return { errors };
+    }
+    
     const user = new User(userData);
 
     // Check if a token can be sent (rate-limiting)
