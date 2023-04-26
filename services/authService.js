@@ -23,32 +23,42 @@ const registerUser = async (userData) => {
         errors.push({ field: 'email', message: 'Invalid email format' });
     }
 
-    // Check if email already exists
-    const existingUser = await User.findOne({ email });
-    if (existingUser) {
-        errors.push({ field: 'email', message: 'Email already in use' });
-    }
-
     // Validate password length
     if (!password || password.length < 8) {
         errors.push({ field: 'password', message: 'Password must be at least 8 characters long' });
     }
-    
+
     // Check if there are validation errors
     if (errors.length > 0) {
         // Return the errors array
         return { errors };
     }
-    
-    const user = new User(userData);
 
-    // Check if a token can be sent (rate-limiting)
-    if (user.twoFATokenSentAt) {
+    // Check if email already exists
+    let user = await User.findOne({ email });
+    if (user) {
+        // Check if user is already verified
+        if (user.isVerified) {
+            errors.push({ field: 'email', message: 'Email is already in use!' });
+            return { errors };
+        }
+
+        // Verify the password
+        const isMatch = await bcrypt.compare(password, user.password);
+        if (!isMatch) {
+            errors.push({ field: 'password', message: 'Incorrect password' });
+            return { errors };
+        }
+
+        // Check if a token can be sent (rate-limiting)
         const now = new Date();
         const timeSinceLastTokenSent = now - user.twoFATokenSentAt;
-        if (timeSinceLastTokenSent < 2 * 60 * 1000) { // 2 minutes in milliseconds
+        if (user.twoFATokenSentAt && timeSinceLastTokenSent < 2 * 60 * 1000) {
             throw new Error('Token can only be sent once every 2 minutes');
         }
+    } else {
+        // Create a new user
+        user = new User(userData);
     }
 
     // Generate 2FA token
@@ -111,20 +121,35 @@ const verifyUser = async (email, twoFAToken) => {
 
 
 const loginUser = async (email, password) => {
+    // Collect error objects in an array
+    const errors = [];
+
+    // Find the user by email
     const user = await User.findOne({ email });
+
+    // Check if user exists
     if (!user) {
-        throw new Error('Invalid email or password');
+        errors.push({ field: 'email', message: 'Email not found' });
+        return { errors };
     }
+
+    // Compare the provided password with the hashed password in the database
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
-        throw new Error('Invalid email or password');
+        errors.push({ field: 'password', message: 'Incorrect password' });
+        return { errors };
     }
+
+    // Check if user is verified
     if (!user.isVerified) {
-        throw new Error('User is not verified. Please verify your account first.');
+        errors.push({ field: 'email', message: 'Email is not verified. Please verify your account first or create account.' });
+        return { errors };
     }
-    // Set the token to expire in 30 minutes
+
+    // If no errors, generate the JWT token and return success message and token
     const token = jwt.sign({ _id: user._id }, process.env.JWT_SECRET, { expiresIn: '30m' });
     return { message: 'Logged in successfully', token };
 };
+
 
 export default { registerUser, verifyUser, loginUser };
