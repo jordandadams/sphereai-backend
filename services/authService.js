@@ -23,10 +23,9 @@ const registerUser = async (userData) => {
         errors.push({ field: 'email', message: 'Invalid email format' });
     }
 
-    // Validate password length
-    if (!password || password.length < 8) {
-        errors.push({ field: 'password', message: 'Password must be at least 8 characters long' });
-    }
+    // Validate the password
+    const passwordErrors = validatePassword(password);
+    errors.push(...passwordErrors);
 
     // Check if there are validation errors
     if (errors.length > 0) {
@@ -151,5 +150,123 @@ const loginUser = async (email, password) => {
     return { message: 'Logged in successfully', token };
 };
 
+const requestPasswordReset = async (email) => {
+    // Find the user by email
+    const user = await User.findOne({ email });
+    if (!user) {
+        throw new Error('Invalid email');
+    }
 
-export default { registerUser, verifyUser, loginUser };
+    // Generate OTP
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    user.resetPasswordToken = otp;
+
+    // Set OTP expiration time (15 minutes from now)
+    const now = new Date();
+    user.resetPasswordTokenExpires = new Date(now.getTime() + 15 * 60 * 1000);
+
+    // Set OTP sent time (rate-limiting)
+    user.resetPasswordTokenSentAt = now;
+
+    await user.save();
+
+    // Email content
+    const msg = {
+        to: user.email,
+        from: 'codingwithjordan@gmail.com',
+        subject: 'Password Reset Request',
+        text: `Your OTP for password reset is: ${otp}`
+    };
+
+    try {
+        // Send email using SendGrid Mail service
+        await sgMail.send(msg);
+        console.log('Email sent');
+    } catch (error) {
+        console.error(error);
+        if (error.response) {
+            console.error(error.response.body);
+        }
+    }
+
+    return { message: 'A code has been sent to your email for a password reset' };
+};
+
+const validatePassword = (password) => {
+    // Collect error objects in an array
+    const errors = [];
+
+    // Validate password length
+    if (!password || password.length < 8) {
+        errors.push({ field: 'password', message: 'Password must be at least 8 characters long' });
+    }
+
+    return errors;
+};
+
+const verifyResetOTP = async (email, otp) => {
+    const user = await User.findOne({ email });
+    if (!user) {
+        throw new Error('Invalid email');
+    }
+
+    // Check if the OTP has expired
+    if (user.resetPasswordTokenExpires && new Date() > user.resetPasswordTokenExpires) {
+        throw new Error('One Time Passcode has expired');
+    }
+
+    // Check if the OTP matches
+    if (user.resetPasswordToken !== otp) {
+        throw new Error('Invalid one time code');
+    }
+
+    // Generate a temporary JWT token for resetting the password
+    const resetToken = jwt.sign({ _id: user._id }, process.env.JWT_SECRET, { expiresIn: '15m' });
+
+    return { message: 'OTP verified successfully', resetToken };
+};
+
+
+const resetPassword = async (resetToken, newPassword, confirmNewPassword) => {
+    // Verify the temporary JWT token
+    let decoded;
+    try {
+        decoded = jwt.verify(resetToken, process.env.JWT_SECRET);
+    } catch (error) {
+        throw new Error('Invalid or expired reset token');
+    }
+
+    // Find the user by decoded _id
+    const user = await User.findById(decoded._id);
+    if (!user) {
+        throw new Error('Invalid user');
+    }
+
+    // Ensure newPassword and confirmNewPassword match
+    if (newPassword !== confirmNewPassword) {
+        throw new Error('Passwords do not match');
+    }
+
+    // Validate the new password
+    const errors = validatePassword(newPassword);
+    if (errors.length > 0) {
+        return { errors };
+    }
+
+    // Compare the new password with the current password
+    const isMatch = await bcrypt.compare(newPassword, user.password);
+    if (isMatch) {
+        throw new Error('New password must be different from the current password');
+    }
+
+    // Update the user's password
+    user.password = newPassword;
+    user.resetPasswordToken = null;
+    user.resetPasswordTokenExpires = null;
+    user.resetPasswordTokenSentAt = null;
+    await user.save();
+
+    return { message: 'Password reset successfully' };
+};
+
+export default { registerUser, verifyUser, loginUser, requestPasswordReset, verifyResetOTP, resetPassword };

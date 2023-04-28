@@ -40,7 +40,10 @@ const userSchema = new mongoose.Schema({
     isVerified: { type: Boolean, default: false },
     twoFAToken: { type: String, default: null },
     twoFATokenExpires: { type: Date, default: null },
-    twoFATokenSentAt: { type: Date, default: null }
+    twoFATokenSentAt: { type: Date, default: null },
+    resetPasswordToken: { type: String, default: null },
+    resetPasswordTokenExpires: { type: Date, default: null },
+    resetPasswordTokenSentAt: { type: Date, default: null }
 });
 
 // Hash the password before saving it to the database
