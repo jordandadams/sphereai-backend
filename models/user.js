@@ -38,6 +38,7 @@ const userSchema = new mongoose.Schema({
         }
     },
     isVerified: { type: Boolean, default: false },
+    isProMember: { type: Boolean, default: false },
     twoFAToken: { type: String, default: null },
     twoFATokenExpires: { type: Date, default: null },
     twoFATokenSentAt: { type: Date, default: null },

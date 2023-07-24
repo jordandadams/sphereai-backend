@@ -3,6 +3,7 @@
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import User from '../models/user.js';
+import UserSession from '../models/userSession.js';
 import nodemailer from 'nodemailer';
 import sgMail from '@sendgrid/mail';
 import dotenv from "dotenv";
@@ -147,7 +148,16 @@ const loginUser = async (email, password) => {
 
     // If no errors, generate the JWT token and return success message and token
     const token = jwt.sign({ _id: user._id }, process.env.JWT_SECRET, { expiresIn: '30m' });
-    return { message: 'Logged in successfully', token };
+    const id = user._id;
+
+    // Record the login session
+    const userSession = new UserSession({
+        userId: id,
+        loginTime: new Date()
+    });
+    await userSession.save();
+
+    return { message: 'Logged in successfully', token, id };
 };
 
 const requestPasswordReset = async (email) => {
