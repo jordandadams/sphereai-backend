@@ -114,4 +114,15 @@ router.post('/reset-password', async (req, res) => {
     }
 });
 
+router.put('/update-fullname', authMiddleware, async (req, res) => {
+    try {
+        const { fullname } = req.body;
+        const userId = req.user._id;
+        const result = await authService.updateFullName(userId, fullname);
+        res.status(200).send(result);
+    } catch (error) {
+        res.status(400).send({ error: error.message });
+    }
+});
+
 export default router;

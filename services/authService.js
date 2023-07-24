@@ -110,7 +110,7 @@ const verifyUser = async (email, twoFAToken) => {
     if (user.twoFAToken !== twoFAToken) {
         throw new Error('Invalid verification code');
     }
-    
+
     user.isVerified = true;
     user.twoFAToken = null;
     user.twoFATokenExpires = null;
@@ -279,4 +279,33 @@ const resetPassword = async (resetToken, newPassword, confirmNewPassword) => {
     return { message: 'Password reset successfully' };
 };
 
-export default { registerUser, verifyUser, loginUser, requestPasswordReset, verifyResetOTP, resetPassword };
+const updateFullName = async (userId, fullname) => {
+    if (!fullname) {
+        throw new Error("Full name cannot be empty");
+    }
+
+    // Find the user by ID
+    const user = await User.findById(userId);
+    if (!user) {
+        throw new Error("User not found");
+    }
+
+    if (user.fullname && !fullname) {
+        throw new Error("Full name cannot be set to null once it has been set");
+    }
+
+    user.fullname = fullname;
+    await user.save();
+
+    return { message: 'Full name updated successfully' };
+};
+
+export default {
+    registerUser,
+    verifyUser,
+    loginUser,
+    requestPasswordReset,
+    verifyResetOTP,
+    resetPassword,
+    updateFullName
+};
